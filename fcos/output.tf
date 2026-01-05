@@ -11,5 +11,5 @@ output "public_dns" {
 }
 
 output "build_id" {
-  value = random_id.this.id
+  value = local.build
 }

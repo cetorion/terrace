@@ -11,20 +11,25 @@ variable "owner" {
 }
 
 variable "id" {
-  description = "Project distinct ID (included in resource tags)"
+  description = "Project ID"
   type        = string
   default     = "nero"
 }
 
 variable "project" {
-  description = "Project name (included in resource names)"
+  description = "Project name"
   type        = string
 }
 
 variable "environment" {
   description = "Environment"
   type        = string
-  default     = "test"
+}
+
+variable "build" {
+  description = "Build ID"
+  type        = string
+  default     = null
 }
 
 variable "vpc_cidr" {
@@ -52,7 +57,6 @@ variable "subnets" {
     az     = optional(string)
     access = optional(string)
   }))
-  default = []
 
   validation {
     condition = alltrue(

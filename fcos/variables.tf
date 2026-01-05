@@ -3,19 +3,43 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
+variable "owner" {
+  description = "Project owner"
+  type        = string
+  default     = "Nero Dicentra"
+}
+
+variable "id" {
+  description = "Project ID"
+  type        = string
+  default     = "nero"
+}
+
+variable "project" {
+  description = "Project name"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment"
+  type        = string
+  default     = "test"
+}
+
+variable "build" {
+  description = "Build ID"
+  type        = string
+  default     = null
+}
+
 variable "time_zone" {
   type    = string
   default = "Australia/Sydney"
 }
 
-variable "environment" {
-  type    = string
-  default = "test"
-}
-
 variable "instance_type" {
   type    = string
-  default = "t4g.micro"
+  default = "t4g.small"
 }
 
 variable "fcos_vers" {
@@ -29,10 +53,6 @@ variable "ami_owner" {
 }
 
 variable "key_name" {
-  type = string
-}
-
-variable "project" {
   type = string
 }
 

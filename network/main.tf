@@ -1,14 +1,17 @@
 resource "random_id" "this" {
+  # count       = var.build == null ? 1 : 0
   byte_length = 4
 }
 
 locals {
-  name = var.project
+  name  = var.project
+  build = var.build == null ? random_id.this.id : var.build
+
   tags = {
     Owner       = var.owner
     ID          = var.id
     Environment = var.environment
-    Build       = random_id.this.id
+    Build       = local.build
     Project     = var.project
   }
 
@@ -93,16 +96,19 @@ resource "aws_internet_gateway" "this" {
 resource "aws_route_table" "public" {
   count  = contains(local.subs_access, "public") ? 1 : 0
   vpc_id = aws_vpc.this.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.this[0].id
-  }
   tags = merge(
     local.tags,
     {
       Name = "${local.name}-public-rt"
     }
   )
+}
+
+resource "aws_route" "default" {
+  count                  = contains(local.subs_access, "public") ? 1 : 0
+  route_table_id         = aws_route_table.public[0].id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.this[0].id
 }
 
 resource "aws_route_table" "private" {
