@@ -32,27 +32,3 @@ resource "aws_route_table_association" "this" {
   subnet_id      = aws_subnet.this.id
   route_table_id = aws_route_table.this.id
 }
-
-resource "aws_security_group" "this" {
-  name        = "${var.project}-sg"
-  description = "Allow SSH"
-  vpc_id      = aws_vpc.this.id
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "ALL"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.tags, { Name = "${var.project}-sg" })
-}
