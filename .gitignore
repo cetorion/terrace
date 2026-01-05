@@ -38,3 +38,6 @@ terraform.rc
 
 # Don't include lock for now
 .terraform.lock.hcl
+
+# Custom
+test/

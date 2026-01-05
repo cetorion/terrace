@@ -41,6 +41,16 @@ locals {
       access    = lookup(s, "access", "private")
     }, s)
   ]
+
+
+  #create_cidr = alltrue([for s in var.subnets : coalesce(s.cidr, "x") == "x"])
+  create_cidr = alltrue([for s in var.subnets : s.cidr == null])
+  subnets2 = local.create_cidr ? [
+    for i, s in var.subnets : merge(s, {
+      cidr = cidrsubnet(var.vpc_cidr, 8, i + 1)
+    })
+  ] : var.subnets
+
   subnets_by_az = {
     for a in local.azs : a => {
       public  = [for s in local.subnets : s.name if s.access == "public"]

@@ -28,25 +28,10 @@ variable "environment" {
   default = "test"
 }
 
-variable "cidr_block" {
+variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
   default     = "10.0.0.0/16"
-}
-
-variable "subnets" {
-  description = "List of subnet definitions (can be empty)"
-  type = list(object({
-    cidr_block = string
-    az         = optional(string)
-    access     = optional(string)
-  }))
-  default = []
-
-  validation {
-    condition     = alltrue([for v in var.subnets : contains(["public", "private"], v.access)])
-    error_message = "Only 'private and 'public' types allowed"
-  }
 }
 
 variable "enable_dns_hostnames" {
@@ -57,4 +42,38 @@ variable "enable_dns_hostnames" {
 variable "enable_dns_support" {
   type    = bool
   default = true
+}
+
+variable "subnets" {
+  description = "List of subnet definitions (can be empty)"
+  type = list(object({
+    cidr   = optonal(string)
+    az     = optional(string)
+    access = optional(string)
+  }))
+  default = []
+
+  validation {
+    condition = alltrue(
+      [for v in var.subnets :
+      contains(["public", "private"], v.access) if v.access != null]
+    )
+    error_message = "Only 'private and 'public' access types are allowed"
+  }
+  validation {
+    condition = (
+      alltrue([for s in var.subnets : s.cidr == null])
+      ||
+      alltrue([for s in var.subnets : can(cidrhost(s.cidr, 1))])
+    )
+    error_message = "Must be either all valid CIDRs or all NULLs"
+  }
+  validation {
+    condition = (
+      length([for s in var.subnets : s.cidr if s.cidr != null])
+      ==
+      length(distinct([for s in var.subnets : s.cidr if s.cidr != null]))
+    )
+    error_message = "Each CIDR must be unique"
+  }
 }
