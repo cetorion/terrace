@@ -1,31 +1,30 @@
 variable "aws_region" {
-  type    = string
-  default = "ap-southeast-2"
+  description = "AWS region"
+  type        = string
+  default     = "ap-southeast-2"
 }
 
 variable "owner" {
-  type    = string
-  default = "Nero Dicentra"
+  description = "Project owner"
+  type        = string
+  default     = "Nero Dicentra"
 }
 
 variable "id" {
-  type    = string
-  default = "nero"
+  description = "Project distinct ID (included in resource tags)"
+  type        = string
+  default     = "nero"
 }
 
 variable "project" {
-  type    = string
-  default = "planet"
-}
-
-variable "purpose" {
-  type    = string
-  default = "jupiter"
+  description = "Project name (included in resource names)"
+  type        = string
 }
 
 variable "environment" {
-  type    = string
-  default = "test"
+  description = "Environment"
+  type        = string
+  default     = "test"
 }
 
 variable "vpc_cidr" {
@@ -34,14 +33,16 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "enable_dns_hostnames" {
-  type    = bool
-  default = true
+variable "dns_hostnames" {
+  description = "Whether to enable DNS hostnames in VPC"
+  type        = bool
+  default     = true
 }
 
-variable "enable_dns_support" {
-  type    = bool
-  default = true
+variable "dns_support" {
+  description = "Whether to enable DNS support in VPC"
+  type        = bool
+  default     = true
 }
 
 variable "subnets" {

@@ -4,9 +4,10 @@ output "vpc_id" {
 
 output "subnets" {
   value = { for k, s in aws_subnet.this : k => {
-    id                = s.id
-    cidr_block        = s.cidr
-    availability_zone = s.availability_zone
-    Access            = s.tags["Access"]
+    id     = s.id
+    name   = s.name
+    cidr   = s.cidr
+    az     = s.availability_zone
+    Access = s.tags["Access"]
   } }
 }
