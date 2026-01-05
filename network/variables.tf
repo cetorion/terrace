@@ -48,7 +48,7 @@ variable "dns_support" {
 variable "subnets" {
   description = "List of subnet definitions (can be empty)"
   type = list(object({
-    cidr   = optonal(string)
+    cidr   = optional(string)
     az     = optional(string)
     access = optional(string)
   }))
