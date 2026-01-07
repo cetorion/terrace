@@ -11,32 +11,23 @@ locals {
     Project     = var.project
   }
 
-  subnet_config = flatten(
+  subnet_flat = flatten(
     [
-      for i, s in var.subnets : [
-        for c in range(s.count == null || s.count == 0 ? 1 : s.count) : merge(
-          s,
-          {
-            name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${(i * 2) + c}"
-            public_ip = s.access == "public"
-            az        = lookup(s, "az", local.azs[0])
-            access    = lookup(s, "access", "public")
-            cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, (i * 2) + c) : s.cidr
-          }
-        )
+      for s in var.subnets : [
+        for c in range(s.count == null || s.count == 0 ? 1 : s.count) : s
       ]
     ]
   )
 
-  # subnet_config = [
-  #   for i, s in var.subnets : merge(s, {
-  #     name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
-  #     public_ip = s.access == "public"
-  #     az        = lookup(s, "az", local.azs[0])
-  #     access    = lookup(s, "access", "public")
-  #     cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, i + 1) : s.cidr
-  #   })
-  # ]
+  subnet_config = [
+    for i, s in local.subnet_flat : merge(s, {
+      name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
+      public_ip = s.access == "public"
+      az        = lookup(s, "az", local.azs[0])
+      access    = lookup(s, "access", "public")
+      cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, i) : s.cidr
+    })
+  ]
 
   subnets = {
     public  = [for s in local.subnet_config : s if s.access == "public"]
@@ -136,6 +127,12 @@ resource "aws_eip" "this" {
   count      = length(local.subnets.public) > 0 ? 1 : 0
   domain     = "vpc"
   depends_on = [aws_internet_gateway.this]
+  tags = merge(
+    local.tags,
+    {
+      Name = "${local.name}-eip-${count.index}"
+    }
+  )
 }
 
 resource "aws_nat_gateway" "this" {
@@ -143,6 +140,12 @@ resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.this[0].id
   subnet_id     = aws_subnet.public[0].id
   depends_on    = [aws_internet_gateway.this]
+  tags = merge(
+    local.tags,
+    {
+      Name = "${local.name}-ngw-${count.index}"
+    }
+  )
 }
 
 resource "aws_route_table" "private" {
