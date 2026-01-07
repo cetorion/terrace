@@ -56,6 +56,7 @@ variable "subnets" {
     cidr   = optional(string)
     az     = optional(string)
     access = optional(string)
+    count  = optional(number)
   }))
 
   validation {

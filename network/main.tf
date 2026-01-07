@@ -11,15 +11,32 @@ locals {
     Project     = var.project
   }
 
-  subnet_config = [
-    for i, s in var.subnets : merge(s, {
-      name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
-      public_ip = s.access == "public"
-      az        = lookup(s, "az", local.azs[0])
-      access    = lookup(s, "access", "public")
-      cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, i + 1) : s.cidr
-    })
-  ]
+  subnet_config = flatten(
+    [
+      for i, s in var.subnets : [
+        for c in range(s.count == null || s.count == 0 ? 1 : s.count) : merge(
+          s,
+          {
+            name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${(i * 2) + c}"
+            public_ip = s.access == "public"
+            az        = lookup(s, "az", local.azs[0])
+            access    = lookup(s, "access", "public")
+            cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, (i * 2) + c) : s.cidr
+          }
+        )
+      ]
+    ]
+  )
+
+  # subnet_config = [
+  #   for i, s in var.subnets : merge(s, {
+  #     name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
+  #     public_ip = s.access == "public"
+  #     az        = lookup(s, "az", local.azs[0])
+  #     access    = lookup(s, "access", "public")
+  #     cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, i + 1) : s.cidr
+  #   })
+  # ]
 
   subnets = {
     public  = [for s in local.subnet_config : s if s.access == "public"]
