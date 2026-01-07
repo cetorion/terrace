@@ -4,32 +4,20 @@ variable "aws_region" {
   default     = "ap-southeast-2"
 }
 
-variable "owner" {
-  description = "Project owner"
-  type        = string
-  default     = "Nero Dicentra"
-}
-
-variable "id" {
-  description = "Project ID"
-  type        = string
-  default     = "nero"
-}
-
 variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment"
-  type        = string
-}
-
-variable "build" {
-  description = "Build ID"
-  type        = string
-  default     = null
+  description = "Project configuration"
+  type = object({
+    name  = string
+    owner = string
+    build = string
+    env   = string
+  })
+  default = {
+    name  = "marble"
+    owner = "nero"
+    build = null
+    env   = "test"
+  }
 }
 
 variable "vpc_cidr" {

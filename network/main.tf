@@ -1,17 +1,15 @@
 locals {
-  name  = var.project
-  build = var.build == null ? random_id.this.id : var.build
+  build = var.project.build == null ? random_id.this.id : var.project.build
   azs   = data.aws_availability_zones.available.names
 
   tags = {
-    Owner       = var.owner
-    ID          = var.id
-    Environment = var.environment
+    Owner       = var.project.owner
+    Environment = var.project.env
     Build       = local.build
-    Project     = var.project
+    Project     = var.project.name
   }
 
-  subnet_flat = flatten(
+  flat = flatten(
     [
       for s in var.subnets : [
         for c in range(s.count == null || s.count == 0 ? 1 : s.count) : s
@@ -19,9 +17,9 @@ locals {
     ]
   )
 
-  subnet_config = [
-    for i, s in local.subnet_flat : merge(s, {
-      name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
+  config = [
+    for i, s in local.flat : merge(s, {
+      name      = "${var.project.name}-subnet-${lookup(s, "access", "public")}-${i}"
       public_ip = s.access == "public"
       az        = lookup(s, "az", local.azs[0])
       access    = lookup(s, "access", "public")
@@ -30,8 +28,8 @@ locals {
   ]
 
   subnets = {
-    public  = [for s in local.subnet_config : s if s.access == "public"]
-    private = [for s in local.subnet_config : s if s.access == "private"]
+    public  = [for s in local.config : s if s.access == "public"]
+    private = [for s in local.config : s if s.access == "private"]
   }
 }
 
@@ -50,7 +48,7 @@ resource "aws_vpc" "this" {
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-vpc"
+      Name = "${var.project.name}-vpc"
     }
   )
 }
@@ -93,7 +91,7 @@ resource "aws_internet_gateway" "this" {
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-igw-${count.index}"
+      Name = "${var.project.name}-igw-${count.index}"
     }
   )
 }
@@ -104,7 +102,7 @@ resource "aws_route_table" "public" {
   tags = merge(
     local.tags,
     {
-      Name   = "${local.name}-rt-public-${count.index}"
+      Name   = "${var.project.name}-rt-public-${count.index}"
       Access = "public"
     }
   )
@@ -130,7 +128,7 @@ resource "aws_eip" "this" {
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-eip-${count.index}"
+      Name = "${var.project.name}-eip-${count.index}"
     }
   )
 }
@@ -143,7 +141,7 @@ resource "aws_nat_gateway" "this" {
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-ngw-${count.index}"
+      Name = "${var.project.name}-ngw-${count.index}"
     }
   )
 }
@@ -154,7 +152,7 @@ resource "aws_route_table" "private" {
   tags = merge(
     local.tags,
     {
-      Name   = "${local.name}-rt-private-${count.index}"
+      Name   = "${var.project.name}-rt-private-${count.index}"
       Access = "private"
     }
   )

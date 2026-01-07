@@ -1,35 +1,34 @@
 locals {
   userdata = data.ct_config.this.rendered
-  build    = var.build_id == null ? random_id.this[0].hex : var.build_id
+  build    = var.project.build == null ? random_id.this[0].hex : var.project.build
+  vpc_id   = module.network.vpc_id
+  subnets  = module.network.subnets
 
-  vpc_id = var.vpc_id == null ? module.network.vpc_id : var.vpc_id
-  subnets = var.vpc_id == null ? {
-    public  = [for s in module.network.subnets : s.id if s.access == "public"]
-    private = [for s in module.network.subnets : s.id if s.access == "private"]
-  } : null
-
-  # Normalise list of instances
-  instances = flatten(
+  flat = flatten(
     [
       for c in var.compute : [
-        for i in range(c.count) : merge(
-          c,
-          {
-            ami_id      = c.ami_id == null ? data.aws_ami.this[c.ami_name].id : c.ami_id
-            subnet_id   = c.subnet_id == null ? local.subnets[c.access_type][0] : c.subnet_id
-            access_type = c.access_type == null ? "public" : c.access_type
-          }
-        )
+        for i in range(c.count == null || c.count == 0 ? 1 : c.count) : c
       ]
     ]
   )
 
+  instances = [
+    for c in local.flat : merge(
+      c,
+      {
+        ami_id      = c.ami_id == null ? data.aws_ami.this[c.ami_name].id : c.ami_id
+        subnet_id   = c.subnet_id == null ? local.subnets[c.access_type][0].id : c.subnet_id
+        access_type = c.access_type == null ? "public" : c.access_type
+        public_ip   = c.access_type != "private"
+      }
+    )
+  ]
+
   tags = {
-    Owner       = var.owner
-    ID          = var.id
-    Environment = var.environment
+    Owner       = var.project.owner
+    Environment = var.project.env
     Build       = local.build
-    Project     = var.project
+    Project     = var.project.name
   }
 }
 
@@ -56,10 +55,10 @@ data "aws_ami" "this" {
 }
 
 data "ct_config" "this" {
-  content = templatefile("${path.module}/fcos.yaml",
+  content = templatefile("${path.module}/fcos.yaml.tpl",
     {
-      hostname  = var.project,
-      ssh_key   = var.ssh_key,
+      hostname  = var.project.name,
+      ssh_keys  = var.ssh_keys,
       time_zone = var.time_zone
     }
   )
@@ -68,7 +67,7 @@ data "ct_config" "this" {
 }
 
 resource "random_id" "this" {
-  count       = var.build_id == null ? 1 : 0
+  count       = var.project.build == null ? 1 : 0
   byte_length = 4
 }
 
@@ -86,14 +85,14 @@ resource "aws_instance" "this" {
   tags = merge(
     local.tags,
     {
-      Name   = "${var.project}-compute-${count.index}"
+      Name   = "${var.project.name}-compute-${count.index}"
       Access = local.instances[count.index].access_type
     }
   )
 }
 
 resource "aws_security_group" "this" {
-  name        = "${var.project}-sg"
+  name        = "${var.project.name}-sg"
   description = "Allow SSH"
   vpc_id      = local.vpc_id
 
@@ -116,7 +115,7 @@ resource "aws_security_group" "this" {
   tags = merge(
     local.tags,
     {
-      Name = "${var.project}-sg"
+      Name = "${var.project.name}-sg"
     }
   )
 }

@@ -3,48 +3,29 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
-variable "owner" {
-  description = "Project owner"
-  type        = string
-  default     = "Nero Dicentra"
-}
-
-variable "id" {
-  description = "Project ID"
-  type        = string
-  default     = "nero"
-}
-
-variable "project" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment"
-  type        = string
-  default     = "test"
-}
-
-variable "build_id" {
-  description = "Build ID"
-  type        = string
-  default     = null
-}
-
 variable "time_zone" {
   type    = string
   default = "Australia/Sydney"
 }
 
-variable "ssh_key" {
-  type = string
+variable "project" {
+  description = "Project configuration"
+  type = object({
+    name  = string
+    owner = string
+    build = string
+    env   = string
+  })
+  default = {
+    name  = "marble"
+    owner = "nero"
+    build = null
+    env   = "test"
+  }
 }
 
-variable "vpc_id" {
-  description = "Instance VPC"
-  type        = string
-  default     = null
+variable "ssh_keys" {
+  type = list(string)
 }
 
 variable "compute" {
@@ -61,6 +42,18 @@ variable "compute" {
     user_data       = optional(string)
     count           = optional(number)
   }))
+
+  default = [
+    {
+      ami_id        = null
+      ami_name      = "fcos"
+      instance_type = "t4g.small"
+      public_ip     = true
+      count         = 1
+      key_name      = "cetorion"
+      access_type   = "public"
+    }
+  ]
 
   validation {
     condition = alltrue(
@@ -81,18 +74,6 @@ variable "compute" {
     )
     error_message = "Exactly one of ami_id or ami_name must be set."
   }
-
-  default = [
-    {
-      ami_id        = null
-      ami_name      = "fcos"
-      instance_type = "t4g.small"
-      public_ip     = true
-      count         = 1
-      key_name      = "cetorion"
-      access_type   = "public"
-    }
-  ]
 }
 
 variable "ami_cfg" {

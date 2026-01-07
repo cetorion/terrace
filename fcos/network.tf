@@ -1,14 +1,16 @@
 module "network" {
   source = "../network"
 
-  owner       = var.owner
-  id          = var.id
-  project     = var.project
-  environment = var.environment
-  build       = local.build
+  project = merge(
+    var.project, { build = local.build }
+  )
+
   subnets = [
     {
       access = "public"
+    },
+    {
+      access = "private"
     }
   ]
 }

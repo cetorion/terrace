@@ -2,14 +2,16 @@ variant: fcos
 version: 1.5.0
 passwd:
   users:
-    - name: super
-      groups: [wheel]
-      ssh_authorized_keys:
-        - ${ssh_key}
+  - name: super
+    groups: [wheel]
+    ssh_authorized_keys:
+  %{ for k in ssh_keys ~}
+  - ${k}
+  %{ endfor }
 storage:
   links:
-    - path: /etc/localtime
-      target: ../usr/share/zoneinfo/${time_zone}
+  - path: /etc/localtime
+    target: ../usr/share/zoneinfo/${time_zone}
   files:
   - path: /etc/hostname
     mode: 0644
