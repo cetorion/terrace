@@ -3,13 +3,24 @@ output "vpc_id" {
 }
 
 output "subnets" {
-  value = [
-    for k, s in aws_subnet.this : {
-      name   = k
-      id     = s.id
-      cidr   = s.cidr_block
-      az     = s.availability_zone
-      access = s.tags["Access"]
-    }
-  ]
+  value = {
+    public = [
+      for s in aws_subnet.public : {
+        name   = s.tags["Name"]
+        id     = s.id
+        cidr   = s.cidr_block
+        az     = s.availability_zone
+        access = s.tags["Access"]
+      }
+    ]
+    private = [
+      for s in aws_subnet.private : {
+        name   = s.tags["Name"]
+        id     = s.id
+        cidr   = s.cidr_block
+        az     = s.availability_zone
+        access = s.tags["Access"]
+      }
+    ]
+  }
 }

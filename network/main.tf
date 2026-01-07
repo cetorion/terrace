@@ -1,11 +1,7 @@
-resource "random_id" "this" {
-  # count       = var.build == null ? 1 : 0
-  byte_length = 4
-}
-
 locals {
   name  = var.project
   build = var.build == null ? random_id.this.id : var.build
+  azs   = data.aws_availability_zones.available.names
 
   tags = {
     Owner       = var.owner
@@ -15,6 +11,28 @@ locals {
     Project     = var.project
   }
 
+  subnet_config = [
+    for i, s in var.subnets : merge(s, {
+      name      = "${local.name}-subnet-${lookup(s, "access", "public")}-${i}"
+      public_ip = s.access == "public"
+      az        = lookup(s, "az", local.azs[0])
+      access    = lookup(s, "access", "public")
+      cidr      = s.cidr == null ? cidrsubnet(var.vpc_cidr, 8, i + 1) : s.cidr
+    })
+  ]
+
+  subnets = {
+    public  = [for s in local.subnet_config : s if s.access == "public"]
+    private = [for s in local.subnet_config : s if s.access == "private"]
+  }
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+resource "random_id" "this" {
+  byte_length = 4
 }
 
 resource "aws_vpc" "this" {
@@ -29,106 +47,108 @@ resource "aws_vpc" "this" {
   )
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-locals {
-  azs = data.aws_availability_zones.available.names
-
-  #create_cidr = alltrue([for s in var.subnets : coalesce(s.cidr, "x") == "x"])
-  create_cidr = alltrue([for s in var.subnets : s.cidr == null])
-
-  # Create subnet cidr if not provided in vars
-  subs_cidr = local.create_cidr ? [
-    for i, s in var.subnets : merge(s, {
-      cidr = cidrsubnet(var.vpc_cidr, 8, i + 1)
-    })
-  ] : var.subnets
-
-  # Normalise subnets
-  subnets = [
-    for i, s in local.subs_cidr : merge(s, {
-      name      = "${local.name}-subnet-${i}"
-      public_ip = s.access == "public"
-      az        = lookup(s, "az", local.azs[0])
-      access    = lookup(s, "access", "private")
-    })
-  ]
-
-  subs_by_az = {
-    for a in local.azs : a => {
-      public  = [for s in local.subnets : s.name if s.access == "public"]
-      private = [for s in local.subnets : s.name if s.access == "private"]
-    }
-  }
-
-  subs_access = distinct([for s in local.subnets : s.access])
-}
-
-resource "aws_subnet" "this" {
-  for_each = { for s in local.subnets : s.name => s }
+resource "aws_subnet" "public" {
+  count = length(local.subnets.public)
 
   vpc_id                  = aws_vpc.this.id
-  cidr_block              = each.value.cidr
-  availability_zone       = each.value.az
-  map_public_ip_on_launch = each.value.public_ip
+  cidr_block              = local.subnets.public[count.index].cidr
+  availability_zone       = local.subnets.public[count.index].az
+  map_public_ip_on_launch = local.subnets.public[count.index].public_ip
   tags = merge(
     local.tags,
     {
-      Name   = each.key
-      Access = each.value.access
+      Name   = local.subnets.public[count.index].name
+      Access = local.subnets.public[count.index].access
+    }
+  )
+}
+
+resource "aws_subnet" "private" {
+  count = length(local.subnets.private)
+
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = local.subnets.private[count.index].cidr
+  availability_zone       = local.subnets.private[count.index].az
+  map_public_ip_on_launch = local.subnets.private[count.index].public_ip
+  tags = merge(
+    local.tags,
+    {
+      Name   = local.subnets.private[count.index].name
+      Access = local.subnets.private[count.index].access
     }
   )
 }
 
 resource "aws_internet_gateway" "this" {
-  count  = contains(local.subs_access, "public") ? 1 : 0
+  count  = length(local.subnets.public) > 0 ? 1 : 0
   vpc_id = aws_vpc.this.id
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-igw"
+      Name = "${local.name}-igw-${count.index}"
     }
   )
 }
 
 resource "aws_route_table" "public" {
-  count  = contains(local.subs_access, "public") ? 1 : 0
+  count  = length(local.subnets.public) > 0 ? 1 : 0
   vpc_id = aws_vpc.this.id
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-public-rt"
+      Name   = "${local.name}-rt-public-${count.index}"
+      Access = "public"
     }
   )
 }
 
-resource "aws_route" "default" {
-  count                  = contains(local.subs_access, "public") ? 1 : 0
+resource "aws_route" "public" {
+  count                  = length(local.subnets.public) > 0 ? 1 : 0
   route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.this[0].id
 }
 
+resource "aws_route_table_association" "public" {
+  count          = length(local.subnets.public)
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public[0].id
+}
+
+resource "aws_eip" "this" {
+  count      = length(local.subnets.public) > 0 ? 1 : 0
+  domain     = "vpc"
+  depends_on = [aws_internet_gateway.this]
+}
+
+resource "aws_nat_gateway" "this" {
+  count         = length(local.subnets.public) > 0 ? 1 : 0
+  allocation_id = aws_eip.this[0].id
+  subnet_id     = aws_subnet.public[0].id
+  depends_on    = [aws_internet_gateway.this]
+}
+
 resource "aws_route_table" "private" {
-  count  = contains(local.subs_access, "private") ? 1 : 0
+  count  = length(local.subnets.private) > 0 ? 1 : 0
   vpc_id = aws_vpc.this.id
   tags = merge(
     local.tags,
     {
-      Name = "${local.name}-private-rt"
+      Name   = "${local.name}-rt-private-${count.index}"
+      Access = "private"
     }
   )
 }
 
-resource "aws_route_table_association" "this" {
-  for_each = aws_subnet.this
+resource "aws_route" "private" {
+  count                  = length(local.subnets.private) > 0 ? 1 : 0
+  route_table_id         = aws_route_table.private[0].id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.this[0].id
+}
 
-  subnet_id = each.value.id
-  route_table_id = (
-    lookup(each.value.tags, "Access") == "public"
-    ? aws_route_table.public[0].id
-    : aws_route_table.private[0].id
-  )
+resource "aws_route_table_association" "private" {
+  count          = length(local.subnets.private)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[0].id
 }
