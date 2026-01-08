@@ -1,0 +1,64 @@
+variant: fcos
+version: 1.5.0
+passwd:
+  users:
+  - name: super
+    groups: [wheel]
+    ssh_authorized_keys:
+    - ${ssh_key}
+storage:
+  links:
+  - path: /etc/localtime
+    target: ../usr/share/zoneinfo/${time_zone}
+  files:
+  - path: /etc/hostname
+    mode: 0644
+    overwrite: true
+    contents:
+      inline: ${hostname}
+  - path: /etc/sudoers.d/10-wheel
+    mode: 0644
+    contents:
+      inline: "%wheel ALL=(ALL) NOPASSWD: ALL"
+  - path: /opt/bootstrap.sh
+    mode: 0755
+    overwrite: true
+    contents:
+      inline: |
+        #!/bin/bash
+        set -e
+        PORT="7777"
+        setenforce 0
+        sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
+        cat << EOF > /etc/ssh/sshd_config.d/10-hard.conf
+        Port $PORT
+        PermitRootLogin no
+        PasswordAuthentication no
+        PubkeyAuthentication yes
+        MaxAuthTries 3
+        X11Forwarding no
+        EOF
+        systemctl edit --stdin sshd.socket <<EOF
+        [Socket]
+        ListenStream=$PORT
+        Accept=yes
+        EOF
+        systemctl daemon-reload
+        systemctl restart sshd
+        rpm-ostree install -Ay python
+systemd:
+  units:
+    - name: bootstrap.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Bootstrap script
+        After=network-online.target
+        [Service]
+        Type=oneshot
+        User=root
+        ExecStart=/opt/bootstrap.sh
+        RemainAfterExit=yes
+        [Install]
+        WantedBy=multi-user.target
+

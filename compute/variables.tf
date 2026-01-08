@@ -25,7 +25,7 @@ variable "project" {
 }
 
 variable "ssh_keys" {
-  type = map(string)
+  type = map(list(string))
 }
 
 variable "compute" {

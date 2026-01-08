@@ -1,9 +1,7 @@
 locals {
-  build  = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
-  vpc_id = data.aws_vpc.this.id
-  subnets = {
-    public = [data.aws_subnet.public]
-  }
+  build   = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
+  vpc_id  = module.network.vpc_id
+  subnets = module.network.subnets
 
   flat = flatten(
     [
@@ -21,6 +19,7 @@ locals {
         subnet_id = c.subnet_id == null ? local.subnets[c.access][0].id : c.subnet_id
         access    = c.access == null ? "public" : c.access
         public_ip = c.access != "private"
+        name      = "${var.project.name}-${c.access == null ? "public" : c.access}-${i}"
         name      = "${c.name == null ? var.project.name : c.name}-${local.build}-${i}"
       }
     )
@@ -31,29 +30,6 @@ locals {
     Environment = var.project.env
     Build       = local.build
     Project     = var.project.name
-  }
-}
-
-data "aws_vpc" "this" {
-  tags = {
-    Owner   = "nero"
-    Project = "galaxy"
-  }
-}
-
-data "aws_subnets" "public" {
-  tags = {
-    Owner   = "nero"
-    Project = "galaxy"
-    Access  = "public"
-  }
-}
-
-data "aws_subnet" "public" {
-  tags = {
-    Owner   = "nero"
-    Project = "galaxy"
-    Access  = "public"
   }
 }
 
@@ -79,21 +55,13 @@ data "aws_ami" "this" {
   }
 }
 
-# data "ct_config" "this" {
-#   count = length(local.instances)
-
-#   content      = file("${path.module}/new.yaml")
-#   strict       = true
-#   pretty_print = false
-# }
-
 data "ct_config" "this" {
   count = length(local.instances)
 
   content = templatefile("${path.module}/fcos.yaml.tpl",
     {
       hostname  = local.instances[count.index].name,
-      ssh_key   = lookup(var.ssh_keys, local.instances[count.index].access),
+      ssh_keys  = lookup(var.ssh_keys, local.instances[count.index].access),
       time_zone = var.time_zone
     }
   )
@@ -135,14 +103,6 @@ resource "aws_security_group" "this" {
     description = "SSH"
     from_port   = 22
     to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Bastion"
-    from_port   = 7777
-    to_port     = 7777
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }

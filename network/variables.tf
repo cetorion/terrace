@@ -13,7 +13,7 @@ variable "project" {
     env   = string
   })
   default = {
-    name  = "marble"
+    name  = "galaxy"
     owner = "nero"
     build = null
     env   = "test"
