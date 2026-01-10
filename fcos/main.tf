@@ -82,11 +82,12 @@ data "aws_ami" "this" {
 data "ct_config" "this" {
   count = length(local.instances)
 
-  content = templatefile("${path.module}/fcos.yaml",
+  content = templatefile("${path.module}/new.yaml",
     {
       hostname  = local.instances[count.index].name,
       ssh_key   = lookup(var.ssh_keys, local.instances[count.index].access),
       time_zone = var.time_zone
+      ssh_port  = "7777"
     }
   )
   strict       = true

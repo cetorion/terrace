@@ -1,5 +1,8 @@
 variant: fcos
 version: 1.5.0
+kernel_arguments:
+  should_exist:
+    - selinux=0
 passwd:
   users:
     - name: super
@@ -20,6 +23,24 @@ storage:
       mode: 0644
       contents:
         inline: "%wheel ALL=(ALL) NOPASSWD: ALL"
+    - path: /etc/selinux/config
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          SELINUX=disabled
+          SELINUXTYPE=targeted
+    - path: /etc/ssh/sshd_config.d/10-hard.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          Port ${ssh_port}
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          MaxAuthTries 3
+          X11Forwarding no
     - path: /opt/bootstrap.sh
       mode: 0755
       overwrite: true
@@ -27,26 +48,18 @@ storage:
         inline: |
           #!/bin/bash
           set -e
-          PORT="7777"
-          setenforce 0
-          sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
-          cat << EOF > /etc/ssh/sshd_config.d/10-hard.conf
-          Port $PORT
-          PermitRootLogin no
-          PasswordAuthentication no
-          PubkeyAuthentication yes
-          MaxAuthTries 3
-          X11Forwarding no
-          EOF
-          systemctl edit --stdin sshd.socket <<EOF
-          [Socket]
-          ListenStream=$PORT
-          Accept=yes
-          EOF
           systemctl daemon-reload
           systemctl restart sshd
 systemd:
   units:
+    - name: sshd.socket
+      enabled: true
+      dropins:
+        - name: 10-override.conf
+          contents: |
+            [Socket]
+            ListenStream=${ssh_port}
+            Accept=yes
     - name: bootstrap.service
       enabled: true
       contents: |
