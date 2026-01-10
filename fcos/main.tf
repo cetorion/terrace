@@ -79,18 +79,10 @@ data "aws_ami" "this" {
   }
 }
 
-# data "ct_config" "this" {
-#   count = length(local.instances)
-
-#   content      = file("${path.module}/new.yaml")
-#   strict       = true
-#   pretty_print = false
-# }
-
 data "ct_config" "this" {
   count = length(local.instances)
 
-  content = templatefile("${path.module}/fcos.yaml.tpl",
+  content = templatefile("${path.module}/fcos.yaml",
     {
       hostname  = local.instances[count.index].name,
       ssh_key   = lookup(var.ssh_keys, local.instances[count.index].access),
