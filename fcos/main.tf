@@ -17,7 +17,7 @@ locals {
     for i, c in local.flat : merge(
       c,
       {
-        ami_id    = c.ami_id == null ? data.aws_ami.this[c.ami_name].id : c.ami_id
+        ami_id    = c.ami_id == null ? data.aws_ami.this[c.ami_label].id : c.ami_id
         subnet_id = c.subnet_id == null ? local.subnets[c.access][0].id : c.subnet_id
         access    = c.access == null ? "public" : c.access
         public_ip = c.access != "private"
@@ -25,6 +25,8 @@ locals {
       }
     )
   ]
+
+  ports = { for i in local.instances : i.ssh_port => i.name }
 
   tags = {
     Owner       = var.project.owner
@@ -82,12 +84,12 @@ data "aws_ami" "this" {
 data "ct_config" "this" {
   count = length(local.instances)
 
-  content = templatefile("${path.module}/new.yaml",
+  content = templatefile("${path.module}/fcos.yaml",
     {
       hostname  = local.instances[count.index].name,
       ssh_key   = lookup(var.ssh_keys, local.instances[count.index].access),
       time_zone = var.time_zone
-      ssh_port  = "7777"
+      ssh_port  = local.instances[count.index].ssh_port
     }
   )
   strict       = true
@@ -102,10 +104,13 @@ resource "random_id" "this" {
 resource "aws_instance" "this" {
   count = length(local.instances)
 
-  ami                         = local.instances[count.index].ami_id
-  instance_type               = local.instances[count.index].instance_type
-  subnet_id                   = local.instances[count.index].subnet_id
-  vpc_security_group_ids      = [aws_security_group.this.id]
+  ami           = local.instances[count.index].ami_id
+  instance_type = local.instances[count.index].ins_type
+  subnet_id     = local.instances[count.index].subnet_id
+  vpc_security_group_ids = concat(
+    [aws_security_group.this[local.instances[count.index].ssh_port].id],
+    local.instances[count.index].sgs == null ? [] : local.instances[count.index].sgs
+  )
   associate_public_ip_address = local.instances[count.index].public_ip
   key_name                    = local.instances[count.index].key_name
   user_data                   = data.ct_config.this[count.index].rendered
@@ -120,22 +125,16 @@ resource "aws_instance" "this" {
 }
 
 resource "aws_security_group" "this" {
+  for_each = local.ports
+
   name        = "${var.project.name}-sg"
   description = "Allow SSH"
   vpc_id      = local.vpc_id
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
     description = "Bastion"
-    from_port   = 7777
-    to_port     = 7777
+    from_port   = each.key
+    to_port     = each.key
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
