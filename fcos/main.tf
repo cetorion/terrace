@@ -87,7 +87,7 @@ data "ct_config" "this" {
   content = templatefile("${path.module}/fcos.yaml",
     {
       hostname  = local.instances[count.index].name,
-      ssh_key   = lookup(var.ssh_keys, local.instances[count.index].access),
+      ssh_key   = tls_private_key.this.public_key_openssh # lookup(var.ssh_keys, local.instances[count.index].access),
       time_zone = var.time_zone
       ssh_port  = local.instances[count.index].ssh_port
     }
