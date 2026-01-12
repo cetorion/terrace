@@ -16,12 +16,6 @@ variable "project" {
     build = string
     env   = string
   })
-  default = {
-    name  = "marble"
-    owner = "nero"
-    build = null
-    env   = "test"
-  }
 }
 
 variable "compute" {
