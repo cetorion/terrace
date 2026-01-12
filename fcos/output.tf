@@ -1,23 +1,13 @@
 output "instance_id" {
-  value = [for i in aws_instance.this : i.id]
+  value = module.fcos.instances
 }
 
 output "private_ip" {
-  value = {
-    for i in aws_instance.this : i.tags["Name"] => i.private_ip
-  }
+  value = module.fcos.private_ips
 }
 
 output "public_ip" {
-  value = {
-    for i in aws_instance.this : i.tags["Name"] => i.public_ip if lookup(i.tags, "Access") == "public"
-  }
-}
-
-output "public_dns" {
-  value = {
-    for i in aws_instance.this : i.tags["Name"] => i.public_dns if lookup(i.tags, "Access") == "public"
-  }
+  value = module.fcos.public_ips
 }
 
 output "build_id" {

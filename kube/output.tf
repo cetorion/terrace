@@ -1,14 +1,14 @@
-output "instances" {
+output "instance_id" {
   value = [for i in aws_instance.this : i.id]
 }
 
-output "private_ips" {
+output "private_ip" {
   value = {
     for i in aws_instance.this : i.tags["Name"] => i.private_ip
   }
 }
 
-output "public_ips" {
+output "public_ip" {
   value = {
     for i in aws_instance.this : i.tags["Name"] => i.public_ip if lookup(i.tags, "Access") == "public"
   }
