@@ -6,7 +6,6 @@ resource "random_id" "this" {
 locals {
   build   = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
   project = merge(var.project, { build = local.build })
-  key     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP4S0CPM+4ChUzLN5XNWQMNf9nhaES9sokfWO/WOK5Dd openpgp:0xD1411499"
   group   = keys(var.compute)[0]
 }
 
@@ -15,7 +14,7 @@ data "ct_config" "this" {
     {
       user     = var.project.owner
       hostname = "${var.project.name}-${local.group}-${local.build}"
-      key      = local.key
+      key      = tls_private_key.this.public_key_openssh
       zone     = var.zone
       port     = var.compute[local.group].port
     }
@@ -27,7 +26,10 @@ data "ct_config" "this" {
 
 locals {
   userdata = {
-    (local.group) = { userdata = data.ct_config.this.rendered }
+    (local.group) = {
+      userdata = data.ct_config.this.rendered
+      key      = local.key_name
+    }
   }
 
   compute = {
