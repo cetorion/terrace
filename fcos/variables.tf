@@ -3,7 +3,7 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
-variable "time_zone" {
+variable "zone" {
   type    = string
   default = "Australia/Sydney"
 }
@@ -21,19 +21,20 @@ variable "project" {
 variable "compute" {
   description = "Instance configuration"
   type = map(object({
-    type      = string
-    access    = optional(string)
-    ssh_port  = number
-    subnet_id = optional(string)
-    sgs       = optional(list(string))
-    key_name  = string
-    user_data = optional(string)
-    count     = optional(number)
+    type     = string
+    access   = string
+    key      = string
+    port     = optional(number)
+    subnet   = optional(string)
+    ami      = optional(string)
+    sgs      = optional(list(string))
+    userdata = optional(string)
+    count    = optional(number)
   }))
 
 }
 
-variable "ami_cfg" {
+variable "amis" {
   description = "AMI labels configuration"
   type = map(object({
     owner = string

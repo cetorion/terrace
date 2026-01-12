@@ -8,11 +8,11 @@ passwd:
     - name: ${user}
       groups: [wheel]
       ssh_authorized_keys:
-        - ${ssh_key}
+        - ${key}
 storage:
   links:
     - path: /etc/localtime
-      target: ../usr/share/zoneinfo/${time_zone}
+      target: ../usr/share/zoneinfo/${zone}
   files:
     - path: /etc/hostname
       mode: 0644
@@ -35,7 +35,7 @@ storage:
       overwrite: true
       contents:
         inline: |
-          Port ${ssh_port}
+          Port ${port}
           PermitRootLogin no
           PasswordAuthentication no
           PubkeyAuthentication yes
@@ -58,7 +58,7 @@ systemd:
         - name: 10-override.conf
           contents: |
             [Socket]
-            ListenStream=${ssh_port}
+            ListenStream=${port}
             Accept=yes
     - name: bootstrap.service
       enabled: true

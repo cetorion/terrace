@@ -1,15 +1,15 @@
-output "instance_id" {
+output "instances" {
   value = module.fcos.instances
 }
 
-output "private_ip" {
+output "private" {
   value = module.fcos.private_ips
 }
 
-output "public_ip" {
+output "public" {
   value = module.fcos.public_ips
 }
 
-output "build_id" {
+output "build" {
   value = local.build
 }
