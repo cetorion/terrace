@@ -3,6 +3,11 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
+variable "zone" {
+  type    = string
+  default = "Australia/Sydney"
+}
+
 variable "project" {
   description = "Project configuration"
   type = object({
@@ -26,10 +31,11 @@ variable "compute" {
     userdata = optional(string)
     count    = optional(number)
   }))
+
 }
 
 variable "amis" {
-  description = "AMI configuration"
+  description = "AMI labels configuration"
   type = map(object({
     owner = string
     name  = string
