@@ -10,9 +10,6 @@ passwd:
       ssh_authorized_keys:
         - ${key}
 storage:
-  links:
-    - path: /etc/localtime
-      target: ../usr/share/zoneinfo/${zone}
   files:
     - path: /etc/hostname
       mode: 0644
@@ -35,12 +32,23 @@ storage:
       overwrite: true
       contents:
         inline: |
-          Port ${port}
           PermitRootLogin no
           PasswordAuthentication no
           PubkeyAuthentication yes
           MaxAuthTries 3
           X11Forwarding no
+    - path: /etc/yum.repos.d/kubernetes.repo
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://pkgs.k8s.io/core:/stable:/v1.35/rpm/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://pkgs.k8s.io/core:/stable:/v1.35/rpm/repodata/repomd.xml.key
+          # exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
     - path: /opt/bootstrap.sh
       mode: 0755
       overwrite: true
@@ -50,16 +58,10 @@ storage:
           set -e
           systemctl daemon-reload
           systemctl restart sshd
+          rpm-ostree install -yA kubelet kubeadm kubectl
+          systemctl enable --now kubelet
 systemd:
   units:
-    - name: sshd.socket
-      enabled: true
-      dropins:
-        - name: 10-override.conf
-          contents: |
-            [Socket]
-            ListenStream=${port}
-            Accept=yes
     - name: bootstrap.service
       enabled: true
       contents: |

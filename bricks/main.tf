@@ -14,9 +14,7 @@ data "ct_config" "this" {
     {
       user     = var.project.owner
       hostname = "${var.project.name}-${local.group}-${local.build}"
-      key      = tls_private_key.this.public_key_openssh
-      zone     = var.zone
-      port     = var.compute[local.group].port
+      key      = local.key_data
     }
   )
 
@@ -41,8 +39,8 @@ locals {
   }
 }
 
-module "fcos" {
-  source = "../compute"
+module "compute" {
+  source = "git::ssh://git@github.com/cetorion/terrace.git//compute?ref=main"
 
   compute = local.compute
   amis    = var.amis

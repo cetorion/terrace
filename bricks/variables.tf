@@ -3,11 +3,6 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
-variable "zone" {
-  type    = string
-  default = "Australia/Sydney"
-}
-
 variable "project" {
   description = "Project configuration"
   type = object({
@@ -23,8 +18,8 @@ variable "compute" {
   type = map(object({
     type     = string
     access   = string
-    key      = string
-    port     = optional(number)
+    key      = optional(string)
+    port     = number
     subnet   = optional(string)
     ami      = optional(string)
     sgs      = optional(list(string))

@@ -1,6 +1,7 @@
 locals {
   key_name = "${var.project.name}-${local.build}"
   ssm_path = "/compute/keys/${local.key_name}"
+  key_data = tls_private_key.this.public_key_openssh
 }
 
 resource "tls_private_key" "this" {

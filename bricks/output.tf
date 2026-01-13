@@ -1,13 +1,13 @@
 output "instances" {
-  value = module.fcos.instances
+  value = module.compute.instances
 }
 
 output "private" {
-  value = module.fcos.private_ips
+  value = module.compute.private_ips
 }
 
 output "public" {
-  value = module.fcos.public_ips
+  value = module.compute.public_ips
 }
 
 output "build" {
