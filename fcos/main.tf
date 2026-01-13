@@ -42,7 +42,7 @@ locals {
 }
 
 module "fcos" {
-  source = "../compute"
+  source = "git::ssh://git@github.com/cetorion/terrace.git//compute?ref=main"
 
   compute = local.compute
   amis    = var.amis
