@@ -14,6 +14,13 @@ storage:
     - path: /etc/localtime
       target: ../usr/share/zoneinfo/${zone}
   files:
+    - path: /home/${user}/key
+      mode: 0600
+      user:
+        name: ${user}
+      overwrite: true
+      contents:
+        source: "data:;base64,${lock}"
     - path: /etc/hostname
       mode: 0644
       overwrite: true

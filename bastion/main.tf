@@ -10,17 +10,13 @@ locals {
   key_name = values(var.compute)[0].key
 }
 
-data "aws_key_pair" "this" {
-  key_name           = local.key_name
-  include_public_key = true
-}
-
 data "ct_config" "this" {
   content = templatefile("${path.module}/${local.group}.yaml",
     {
       user     = var.project.owner
-      hostname = "${var.project.name}-${local.group}-${local.build}"
-      key      = trimspace(data.aws_key_pair.this.public_key)
+      hostname = "${local.group}-${local.build}"
+      key      = module.keys.material[local.key_name]
+      lock     = module.keys.file[local.group] # file("${pathexpand("~/.ssh")}/${local.name}.key")
       zone     = var.zone
       port     = var.compute[local.group].port
     }
@@ -44,6 +40,21 @@ locals {
       lookup(local.userdata, k, {})
     )
   }
+}
+
+module "keys" {
+  source = "../modules/keys"
+
+  keys = [
+    {
+      name   = local.group
+      create = true
+    },
+    {
+      name   = local.key_name
+      create = false
+    }
+  ]
 }
 
 module "fcos" {

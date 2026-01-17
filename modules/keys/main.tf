@@ -1,40 +1,44 @@
 locals {
-  ssm_path = "/compute/keys/${var.name}"
+  ssm_path = "/compute/keys"
+  keys = {
+    get = { for k in var.keys : k.name => k.create if !k.create }
+    put = { for k in var.keys : k.name => k.create if k.create }
+  }
 }
 
 resource "tls_private_key" "this" {
-  count = var.create ? 1 : 0
+  for_each = local.keys.put
 
   algorithm = var.algorithm
 }
 
 resource "local_sensitive_file" "this" {
-  count = var.create ? 1 : 0
+  for_each = local.keys.put
 
-  content         = tls_private_key.this[0].private_key_openssh
+  content         = tls_private_key.this[each.key].private_key_openssh
   file_permission = "0400"
-  filename        = "${pathexpand("~/.ssh")}/${var.name}.key"
+  filename        = "${pathexpand("~/.ssh")}/${each.key}.key"
 }
 
 resource "aws_ssm_parameter" "this" {
-  count = var.create ? 1 : 0
+  for_each = local.keys.put
 
-  name        = local.ssm_path
-  description = "Private key ${var.name}"
+  name        = "${local.ssm_path}/${each.key}"
+  description = "Private key ${each.key}"
   type        = "SecureString"
-  value       = tls_private_key.this[0].private_key_openssh
+  value       = tls_private_key.this[each.key].private_key_openssh
 }
 
 resource "aws_key_pair" "this" {
-  count = var.create ? 1 : 0
+  for_each = local.keys.put
 
-  key_name   = var.name
-  public_key = tls_private_key.this[0].public_key_openssh
+  key_name   = each.key
+  public_key = tls_private_key.this[each.key].public_key_openssh
 }
 
 data "aws_key_pair" "this" {
-  count = var.create ? 0 : 1
+  for_each = local.keys.get
 
-  key_name           = var.name
+  key_name           = each.key
   include_public_key = true
 }

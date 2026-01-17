@@ -4,10 +4,11 @@ resource "random_id" "this" {
 }
 
 locals {
-  build   = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
-  project = merge(var.project, { build = local.build })
-  group   = keys(var.compute)[0]
-  name    = "${var.project.name}-${local.group}-${local.build}"
+  build    = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
+  project  = merge(var.project, { build = local.build })
+  group    = keys(var.compute)[0]
+  name     = "${var.project.name}-${local.group}-${local.build}"
+  key_name = "bastion"
 }
 
 data "ct_config" "this" {
@@ -15,7 +16,7 @@ data "ct_config" "this" {
     {
       user     = var.project.owner
       hostname = local.name
-      key      = module.key.material
+      key      = module.keys.material[local.key_name]
     }
   )
 
@@ -27,7 +28,7 @@ locals {
   userdata = {
     (local.group) = {
       userdata = data.ct_config.this.rendered
-      key      = module.key.name
+      key      = local.key_name
     }
   }
 
@@ -38,6 +39,18 @@ locals {
       lookup(local.userdata, k, {})
     )
   }
+}
+
+module "keys" {
+  source = "../modules/keys"
+
+  keys = [
+    {
+      name   = local.key_name
+      create = false
+    }
+  ]
+
 }
 
 module "compute" {

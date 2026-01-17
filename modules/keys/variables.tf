@@ -3,16 +3,16 @@ variable "region" {
   default = "ap-southeast-2"
 }
 
-variable "name" {
-  type = string
-}
-
-variable "create" {
-  type    = bool
-  default = true
-}
-
 variable "algorithm" {
   type    = string
   default = "ED25519"
+}
+
+variable "keys" {
+  type = list(object(
+    {
+      name   = string
+      create = bool
+    }
+  ))
 }

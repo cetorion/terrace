@@ -13,7 +13,3 @@ output "public" {
 output "build" {
   value = local.build
 }
-
-output "key_file" {
-  value = module.key.file
-}

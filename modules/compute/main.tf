@@ -96,7 +96,7 @@ resource "aws_security_group" "this" {
   vpc_id      = data.aws_subnet.this[each.key].vpc_id
 
   ingress {
-    description = "Bastion"
+    description = "SSH"
     from_port   = each.value
     to_port     = each.value
     protocol    = "tcp"

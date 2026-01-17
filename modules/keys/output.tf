@@ -1,27 +1,28 @@
 output "material" {
-  value = (
+  value = {
+    for k in var.keys : k.name =>
     trimspace(
-      var.create ?
-      aws_key_pair.this[0].public_key :
-      data.aws_key_pair.this[0].public_key
+      k.create ?
+      aws_key_pair.this[k.name].public_key :
+      data.aws_key_pair.this[k.name].public_key
     )
-  )
+  }
 }
 
 output "name" {
-  value = (
+  value = {
+    for k in var.keys : k.name =>
     trimspace(
-      var.create ?
-      aws_key_pair.this[0].key_name :
-      data.aws_key_pair.this[0].key_name
+      k.create ?
+      aws_key_pair.this[k.name].key_name :
+      data.aws_key_pair.this[k.name].key_name
     )
-  )
+  }
 }
 
 output "file" {
-  value = (
-    var.create ?
-    local_sensitive_file.this[0].filename :
-    null
-  )
+  value = {
+    for k in var.keys : k.name =>
+    base64encode(tls_private_key.this[k.name].private_key_openssh) if k.create
+  }
 }
