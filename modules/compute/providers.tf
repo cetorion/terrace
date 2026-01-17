@@ -6,19 +6,9 @@ terraform {
       version = "~> 6.27"
     }
 
-    ct = {
-      source  = "poseidon/ct"
-      version = "~> 0.14"
-    }
-
     random = {
       source  = "hashicorp/random"
       version = "~> 3.7"
-    }
-
-    tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.1.0"
     }
   }
 }

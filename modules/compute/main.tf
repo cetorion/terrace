@@ -5,23 +5,23 @@ locals {
     for k, v in var.compute : k => v.access if v.subnet == null
   }
 
+  sgs = {
+    for k, v in var.compute : k => v.port == null ? 22 : v.port
+  }
+
   ins = flatten([
     for n, c in var.compute : [
       for i in range(c.count == null ? 1 : c.count) : merge(c,
         {
-          ami    = c.ami == null ? data.aws_ami.this[n].id : c.ami
+          ami_id = c.ami_id == null ? data.aws_ami.this[c.ami_label].id : c.ami_id
           subnet = c.subnet == null ? data.aws_subnet.this[n].id : c.subnet
           ip     = c.access != "private"
           name   = "${var.project.name}-${n}-${local.build}"
-          port   = c.port == null ? 22 : c.port
-          group  = n
+          sgs    = concat([aws_security_group.this[n].id], c.sgs == null ? [] : c.sgs)
         }
       )
     ]
   ])
-
-
-  ports = { for i in local.ins : i.group => i.port }
 
   tags = {
     Owner       = var.project.owner
@@ -71,13 +71,10 @@ resource "random_id" "this" {
 resource "aws_instance" "this" {
   count = length(local.ins)
 
-  ami           = local.ins[count.index].ami
-  instance_type = local.ins[count.index].type
-  subnet_id     = local.ins[count.index].subnet
-  vpc_security_group_ids = concat(
-    [aws_security_group.this[local.ins[count.index].group].id],
-    local.ins[count.index].sgs == null ? [] : local.ins[count.index].sgs
-  )
+  ami                         = local.ins[count.index].ami_id
+  instance_type               = local.ins[count.index].type
+  subnet_id                   = local.ins[count.index].subnet
+  vpc_security_group_ids      = local.ins[count.index].sgs
   associate_public_ip_address = local.ins[count.index].ip
   key_name                    = local.ins[count.index].key
   user_data                   = local.ins[count.index].userdata
@@ -92,7 +89,7 @@ resource "aws_instance" "this" {
 }
 
 resource "aws_security_group" "this" {
-  for_each = local.ports
+  for_each = local.sgs
 
   name        = "${var.project.name}-${each.key}-${local.build}"
   description = "Allow SSH"

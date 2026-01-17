@@ -4,9 +4,15 @@ resource "random_id" "this" {
 }
 
 locals {
-  build   = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
-  project = merge(var.project, { build = local.build })
-  group   = keys(var.compute)[0]
+  build    = upper(var.project.build == null ? random_id.this[0].hex : var.project.build)
+  project  = merge(var.project, { build = local.build })
+  group    = keys(var.compute)[0]
+  key_name = values(var.compute)[0].key
+}
+
+data "aws_key_pair" "this" {
+  key_name           = local.key_name
+  include_public_key = true
 }
 
 data "ct_config" "this" {
@@ -14,7 +20,7 @@ data "ct_config" "this" {
     {
       user     = var.project.owner
       hostname = "${var.project.name}-${local.group}-${local.build}"
-      key      = tls_private_key.this.public_key_openssh
+      key      = trimspace(data.aws_key_pair.this.public_key)
       zone     = var.zone
       port     = var.compute[local.group].port
     }
@@ -28,7 +34,6 @@ locals {
   userdata = {
     (local.group) = {
       userdata = data.ct_config.this.rendered
-      key      = local.key_name
     }
   }
 
@@ -42,7 +47,8 @@ locals {
 }
 
 module "fcos" {
-  source = "git::ssh://git@github.com/cetorion/terrace.git//compute?ref=main"
+  #source = "git::ssh://git@github.com/cetorion/terrace.git//compute?ref=main"
+  source = "../modules/compute"
 
   compute = local.compute
   amis    = var.amis
