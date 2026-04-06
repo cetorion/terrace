@@ -1,0 +1,17 @@
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: actions/checkout@v4
+
+  - id: auth
+    uses: google-github-actions/auth@v1
+    with:
+      create_credentials_file: true
+      workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+      service_account: github-ci@my-project.iam.gserviceaccount.com
+
+  - uses: google-github-actions/setup-gcloud@v2
+
+  - run: gcloud auth list
